@@ -1,0 +1,62 @@
+<div class="alert alert-danger" ng-show="errors.length">
+  <a class="close" data-dismiss="alert" ng-click="errors = false">&times;</a>
+  <ul ng-repeat="error in errors" ng-show="errors.length > 1"><li>{{ error }}</li></ul>
+  <span ng-show="errors.length == 1">{{ errors[0] }}</span>
+</div>
+
+<div class="alert alert-success" ng-show="success">
+  Everything looks okay.
+</div>
+
+<div class="row">
+	<div class="col col-lg-6">
+		<h3>Your IPs on firewall</h3>
+		<ul class="list-group">
+			<li ng-repeat="ip in (ips | orderBy:'ip')" class="list-group-item">
+				<span class="label label-success" ng-show="ip.enabled">Enabled</span>
+				<span class="label label-danger" ng-hide="ip.enabled">Disabled</span>
+				{{ ip.ip }}
+				<div class="pull-right">
+					<a class="btn btn-default btn-small" ng-show="ip.enabled" ng-click="disable(ip.ip)">Disable</a>
+					<a class="btn btn-default btn-small" ng-hide="ip.enabled" ng-click="enable(ip.ip)">Enable</a>
+					<a class="btn btn-danger btn-small" ng-click="remove(ip.ip)">Remove</a>
+				</div>
+			</li>
+		</ul>
+
+		<div class="pull-right"><a ng-click="list()" class="btn btn-default btn-small">Refresh</a></div>
+	</div>
+	<div class="col col-lg-6">
+		<h3>Actions</h3>
+		<form class="form-horizontal" ng-submit="process()">
+		  <div class="row">
+		    <label class="col col-lg-2 control-label">IPs (one per line)</label>
+		    <div class="col col-lg-10">
+		      <textarea ng-model="ipsmodify" rows="10"></textarea>
+		    </div>
+		  </div>
+		  <div class="row">
+		    <label for="" class="col col-lg-2 control-label">Action</label>
+		    <div class="col col-lg-10">
+		      <select ng-model="action">
+		      	<option value="add">Add</option>
+		      	<option value="enable">Enable</option>
+		      	<option value="enable">Disable</option>
+		      	<option value="remove">Remove</option>
+		      </select>
+		    </div>
+		  </div>
+		  <div class="row">
+		    <div class="col col-lg-10 col-offset-2">
+		      <button type="submit" class="btn btn-default">Process</button>
+		    </div>
+		  </div>
+		</form>
+	</div>
+</div>
+
+<style>
+	.list-group .btn-small {
+		margin-top: -5px;
+	}
+</style>

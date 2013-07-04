@@ -1,0 +1,85 @@
+<div class="alert alert-danger" ng-show="errors.length">
+  <a class="close" data-dismiss="alert" ng-click="errors = false">&times;</a>
+  <ul ng-repeat="error in errors" ng-show="errors.length > 1"><li>{{ error }}</li></ul>
+  <span ng-show="errors.length == 1">{{ errors[0] }}</span>
+</div>
+
+<div class="alert alert-success" ng-show="success">
+  Everything looks okay.
+</div>
+
+<div class="pull-right input-group">
+	<select ng-model="ip">
+		<option ng-repeat="ip in (ips | sort)">{{ ip }}</option>
+	</select>
+</div>
+
+<h3>Firewall rules <span ng-show="ip">of {{ ip }}</span></h3>
+
+<div ng-show="rules">
+	<div class="pull-right"><a ng-click="list()" class="btn btn-default btn-small">Refresh</a></div>
+	<h4>Existing rules</h4>
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Seq</th>
+				<th>Rule</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr ng-repeat="rule in rules">
+				<td>{{ rule.sequence }}</td>
+				<td>{{ rule.rule }}</td>
+				<td><a class="btn btn-danger btn-small" ng-click="remove(rule.sequence)">Remove</a></td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+<div>
+	<h4>Add new rules</h4>
+	<form class="form-horizontal" ng-submit="process()">
+	  <div class="row">
+	    <label class="col col-lg-2 control-label">Rules (one per line)</label>
+	    <div class="col col-lg-10">
+	      <textarea ng-model="newRulesRaw" rows="10"></textarea>
+	      <span clas="helpblock">Format: (permit|deny) (ipv4|icmp|tcp|udp) (any|ipsrc) [range port_src_from port_src_to] ipdst [range port_dst_from port_dst_to] {urg,psh,ack,syn,fin,rst,established,fragments}</span>
+	    </div>
+	  </div>
+	  <div class="row">
+	    <div class="col col-lg-10 col-offset-2">
+	      <button type="submit" class="btn btn-default">Add</button>
+	    </div>
+	  </div>
+	</form>
+
+	<h4>Summary of new rules</h4>
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Sequence</th>
+				<th>Action</th>
+				<th>Protocol</th>
+				<th>Source ip</th>
+				<th>Source port</th>
+				<th>IP on Firewall</th>
+				<th>Destination port</th>
+				<th>TCP/UDP Options</th>
+				<th>Error</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr ng-repeat="newRule in newRules" ng-class="{danger: newRule.error}">
+				<td>{{ newRule.sequence }}</td>
+				<td>{{ newRule.action }}</td>
+				<td>{{ newRule.protocol }}</td>
+				<td>{{ newRule.ip_src }}</td>
+				<td>{{ newRule.port_src[0] }} - {{ newRule.port_src[1] }}</td>
+				<td>{{ newRule.ip_dst }}</td>
+				<td>{{ newRule.port_dst[0] }} - {{ newRule.port_dst[1] }}</td>
+				<td>{{ newRule.options }}</td>
+				<td>{{ newRule.error }}</td>
+			</tr>
+		</tbody>
+	</table>
+</div>

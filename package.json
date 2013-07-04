@@ -1,0 +1,18 @@
+{
+  "name": "node-ovh-ip",
+  "version": "0.0.1",
+  "scripts": {
+    "start": "node --harmony-proxies app.js"
+  },
+  "dependencies": {
+    "express": "3.3.2",
+    "config": "latest",
+    "js-yaml": "latest",
+    "ovh": "latest"
+  },
+  "devDependencies": {
+    "grunt": "latest",
+    "grunt-contrib-clean": "latest",
+    "grunt-contrib-less": "latest"
+  }
+}

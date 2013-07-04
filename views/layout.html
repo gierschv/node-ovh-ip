@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="ovhip">
+<head>
+  <meta charset="utf-8">
+  <title>/ip</title>
+  <link href="/dist/css/style.css" rel="stylesheet">
+  <style>body { padding-top: 70px; }</style>
+</style>
+</head>
+<body>
+
+<div class="navbar navbar-inverse navbar-fixed-top">
+  <div class="container">
+    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+    </button>
+    <a class="navbar-brand" href="#/">OVH API /ip</a>
+    <div class="nav-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li><a href="#/">Status / Add / Remove</a></li>
+        <li><a href="#/tasks">Tasks</a></li>
+        <li><a href="#/rules">Rules</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="container" ng-view></div>
+
+<script src="/javascripts/async.js"></script>
+<script src="/javascripts/angular.min.js"></script>
+<script src="/javascripts/angular-resource.min.js"></script>
+<script src="/javascripts/app.js"></script>
+<script src="/javascripts/services.js"></script>
+<script src="/javascripts/controllers.js"></script>
+
+</body>
+</html>
