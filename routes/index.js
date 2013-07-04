@@ -14,7 +14,7 @@ exports.index = function(req, res) {
         { method: 'PUT', 'path': '/ip*'},
         { method: 'DELETE', 'path': '/ip*'}
       ],
-      redirection: 'http://localhost:3000'
+      redirection: config.app.baseUrl
     }, function (success, credentials) {
       req.session.ovh_ck = credentials.consumerKey;
       if (!success) {
