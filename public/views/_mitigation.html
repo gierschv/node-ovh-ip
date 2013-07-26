@@ -1,0 +1,80 @@
+<div class="alert alert-danger" ng-show="errors.length">
+  <a class="close" data-dismiss="alert" ng-click="errors = false">&times;</a>
+  <ul ng-repeat="error in errors" ng-show="errors.length > 1"><li>{{ error }}</li></ul>
+  <span ng-show="errors.length == 1">{{ errors[0] }}</span>
+</div>
+
+<div class="alert alert-success" ng-show="success">
+  Everything looks okay.
+</div>
+
+<div class="row">
+    <div class="col col-lg-6">
+        <div class="pull-right show-actions">
+            <a class="btn btn-default btn-small" href="#/mitigation?showAll" ng-click="showAll = true" ng-hide="showAll">Show all the blocks and IPs</a>
+            <a class="btn btn-default btn-small" href="#/mitigation" ng-click="showAll = false" ng-show="showAll">Show only IPs on mitigation</a>
+            <a href="#/splash?refresh&amp;next=/mitigation" class="btn btn-default btn-small">Refresh</a>
+        </div>
+        <h3>Your IPs on mitigation</h3>
+        <ul class="list-group" ng-show="!showAll">
+            <li ng-repeat="ip in (ipMitigation | orderBy:'ip')" class="list-group-item">
+                <span class="label label-default">{{ ip.mitigation.state }}</span>
+                <span class="label label-danger" ng-show="ip.mitigation.enabled && ip.mitigation.force">Forced</span>
+                {{ ip.ip }}
+                <div class="pull-right">
+                    <a class="btn btn-danger btn-small" ng-click="remove(ip.block, ip.ip, refresh)" ng-show="ip.mitigation.state == 'ok'">Remove</a>
+                </div>
+            </li>
+        </ul>
+
+        <div ng-show="showAll" ng-repeat="(block, blockIps) in ips">
+            <h5>{{ block }}</h5>
+            <ul class="list-group">
+                <li ng-repeat="(ip, ipProps) in (blockIps | orderBy:'ip')" class="list-group-item">
+                    <span class="label label-default" ng-show="ipFw[ip]">{{ ipMitigation[ip].mitigation.state }}</span>
+                    <span class="label label-danger" ng-show="ipMitigation[ip].mitigation.enabled && ipMitigation[ip].mitigation.force">Forced</span>
+                    {{ ip }}
+                    <div class="pull-right">
+                        <a class="btn btn-danger btn-small" ng-show="ipMitigation[ip].mitigation && ipMitigation[ip].mitigation.state == 'ok'" ng-click="remove(block, ip, refresh)">Remove</a>
+                        <a class="btn btn-success btn-small" ng-show="!ipMitigation[ip]" ng-click="add(block, ip, refresh)">Add</a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="col col-lg-6">
+        <h3>Actions</h3>
+        <form class="form-horizontal" ng-submit="process()">
+          <div class="row">
+            <label class="col col-lg-2 control-label">IPs (one per line)</label>
+            <div class="col col-lg-10">
+              <textarea ng-model="ipsmodify" rows="10"></textarea>
+            </div>
+          </div>
+          <div class="row">
+            <label for="" class="col col-lg-2 control-label">Action</label>
+            <div class="col col-lg-10">
+              <select ng-model="action">
+                <option value="add">Add</option>
+                <option value="remove">Remove</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col col-lg-10 col-offset-2">
+              <button type="submit" class="btn btn-default">Process</button>
+            </div>
+          </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .list-group .btn-small {
+        margin-top: -5px;
+    }
+
+    .show-actions {
+        margin-top: 20px;
+    }
+</style>

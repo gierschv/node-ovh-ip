@@ -21,10 +21,12 @@ function SplashCtrl($rootScope, $scope, $http, $location, $routeParams, IpTools)
 
   async.waterfall([
     function (callback) {
-      $http.get('/ip').success(callback.bind(this, false));
+      $http.get('/ip').success(function (ips) {
+        callback(null, ips);
+      });
     },
-    function (ips, httpCode, callback) {
-      $scope.state.total = ips.length;
+    function (ips, callback) {
+      $scope.state.total = ips.length * 2;
       async.each(ips, function (block, callback) {
         $rootScope.ips[block] = {};
         var ipList = IpTools.cidrToRange(block);
@@ -43,15 +45,36 @@ function SplashCtrl($rootScope, $scope, $http, $location, $routeParams, IpTools)
           })
           .error(callback.bind(this, false));
       }, function (err) {
-        if (typeof(window.localStorage) != 'undefined') {
-          window.localStorage.setItem('ovh_ips', JSON.stringify($rootScope.ips));
-        }
-
-        $location.path($routeParams.next ? $routeParams.next : '/');
-        callback();
+        callback(null, ips);
       });
+    },
+    function (ips, callback) {
+      async.each(ips, function (block, callback) {
+        $http
+          .get('/ip/' + encodeURIComponent(block) + '/mitigation')
+          .success(function (ip) {
+            $scope.state.done++;
+            for (var i = 0 ; i < ip.length ; ++i) {
+              $rootScope.ips[block][ip[i]].onMitigation = true;
+            }
+            callback(null);
+          })
+          .error(callback.bind(this, false));
+      }, function (err) {
+        callback(null);
+      });
+    },
+    function (callback) {
+      if (typeof(window.localStorage) != 'undefined') {
+        window.localStorage.setItem('ovh_ips', JSON.stringify($rootScope.ips));
+      }
+
+      $location.path($routeParams.next ? $routeParams.next : '/');
+      callback();
     }
-  ]);
+  ], function () {
+    $scope.$apply();
+  });
 }
 
 SplashCtrl.$inject = [
@@ -60,6 +83,10 @@ SplashCtrl.$inject = [
 
 function HomeCtrl($rootScope, $scope, $location, $routeParams, $http, IpTools, IpFirewall) {
   $scope.refresh = function (noForce) {
+    if ($scope.errors && $scope.errors.length > 0) {
+      return;
+    }
+
     return $location.path('/splash').search({
       refresh: !noForce, showAll: $scope.showAll
     });
@@ -325,4 +352,80 @@ function RulesCtrl($rootScope, $scope, $location, $routeParams, $http, IpTools, 
 
 RulesCtrl.$inject = [
   '$rootScope', '$scope', '$location', '$routeParams', '$http', 'IpTools', 'IpFirewall'
+];
+
+function MitigationCtrl($rootScope, $scope, $location, $routeParams, $http, IpTools, IpMitigation) {
+  $scope.refresh = function (noForce) {
+    if ($scope.errors && $scope.errors.length > 0) {
+      return;
+    }
+
+    return $location.path('/splash').search({
+      refresh: !noForce, showAll: $scope.showAll, next: '/mitigation'
+    });
+  };
+
+  if (!$rootScope.ips) {
+    $scope.refresh(true);
+  }
+
+  if ($routeParams.showAll) {
+    $scope.showAll = true;
+  }
+
+  $scope.list = function () {
+    $scope.ipMitigation = IpTools.listMitigation();
+  };
+
+  $scope.list();
+
+  $scope.errors = [];
+  $scope.success = false;
+  $scope.action = 'add';
+
+  $scope.actions = {
+    'add': { method: 'add' },
+    'remove': { method: 'remove' }
+  };
+
+  for (var a in $scope.actions) {
+    $scope[a] = function (method, params, block, ip, callback) {
+      var route = { ip: block, ipOnMitigation: ip };
+      params = params || {};
+
+      if (method === 'add') {
+        params.ipOnMitigation = ip;
+        delete route.ipOnMitigation;
+      }
+
+      IpMitigation[method](route, params,
+        function (res) {
+          callback && callback(null, res);
+        },
+        function (err) {
+          $scope.errors.push(err);
+          callback && callback(err);
+        }
+      );
+    }.bind(this, $scope.actions[a].method, $scope.actions[a].params);
+  }
+
+  $scope.process = function () {
+    $scope.errors = [];
+    async.map($scope.ipsmodify.split('\n'), function (ip, callback) {
+      var ipDetails = IpTools.getIpDetails(ip);
+      $scope[$scope.action].call(this, ipDetails.block, ip, callback);
+    }, function (err, ips) {
+      if (err) {
+        // $scope.errors.push(err);
+      }
+      else {
+        $scope.success = true;
+      }
+    });
+  };
+};
+
+MitigationCtrl.$inject = [
+  '$rootScope', '$scope', '$location', '$routeParams', '$http', 'IpTools', 'IpMitigation'
 ];

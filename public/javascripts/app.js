@@ -6,6 +6,7 @@ angular.module('ovhip', ['ovhipServices']).
     when('/', { templateUrl: '/views/_home.html', controller: HomeCtrl }).
     when('/splash', { templateUrl: '/views/_splash.html', controller: SplashCtrl }).
     when('/rules', { templateUrl: '/views/_rules.html', controller: RulesCtrl, reloadOnSearch: false }).
+    when('/mitigation', { templateUrl: '/views/_mitigation.html', controller: MitigationCtrl }).
     otherwise({redirectTo: '/'});
 }]).
 filter('sort', function() {
@@ -15,7 +16,7 @@ filter('sort', function() {
     }
   };
 }).
-service('IpTools', ['$rootScope', 'IpFirewall', function ($rootScope, IpFirewall) {
+service('IpTools', ['$rootScope', 'IpFirewall', 'IpMitigation',  function ($rootScope, IpFirewall, IpMitigation) {
   // Generic tools
   this.long2ip = function (long) {
     var a = (long & (0xff << 24)) >>> 24,
@@ -77,5 +78,21 @@ service('IpTools', ['$rootScope', 'IpFirewall', function ($rootScope, IpFirewall
     }
 
     return ipFw;
+  };
+
+  this.listMitigation = function () {
+    var ipMitigation = {};
+    for (var block in $rootScope.ips) {
+      for (var ip in $rootScope.ips[block]) {
+        if ($rootScope.ips[block][ip].onMitigation) {
+          ipMitigation[ip] = {
+            block: block, ip: ip,
+            mitigation: IpMitigation.get({ ip: block, ipOnMitigation: ip })
+          };
+        }
+      }
+    }
+
+    return ipMitigation;
   };
 }]);

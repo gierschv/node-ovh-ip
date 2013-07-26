@@ -9,4 +9,9 @@ angular.module('ovhipServices', ['ngResource']).
       addRule: { method: 'POST', params: { action: 'rules' }},
       delRule: { method: 'DELETE', params: { action: 'rules' }}
     });
+  }]).
+  factory('IpMitigation', ['$resource', function ($resource) {
+    return $resource('/ip/:ip/mitigation/:ipOnMitigation', {}, {
+      add: { method: 'POST' }
+    });
   }]);
