@@ -10,21 +10,43 @@
 
 <div class="row">
 	<div class="col col-lg-6">
+		<div class="pull-right show-actions">
+			<a class="btn btn-default btn-small" href="#/?showAll" ng-click="showAll = true" ng-hide="showAll">Show all the blocks and IPs</a>
+			<a class="btn btn-default btn-small" href="#/" ng-click="showAll = false" ng-show="showAll">Show only IPs on FW</a>
+			<a href="#/splash?refresh&amp;next=/" class="btn btn-default btn-small">Refresh</a>
+		</div>
 		<h3>Your IPs on firewall</h3>
-		<ul class="list-group">
-			<li ng-repeat="ip in (ips | orderBy:'ip')" class="list-group-item">
-				<span class="label label-success" ng-show="ip.enabled">Enabled</span>
-				<span class="label label-danger" ng-hide="ip.enabled">Disabled</span>
+		<ul class="list-group" ng-show="!showAll">
+			<li ng-repeat="ip in (ipFw | orderBy:'ip')" class="list-group-item">
+				<span class="label label-default">{{ ip.fw.state }}</span>
+				<span class="label label-success" ng-show="ip.fw.enabled && ip.fw.state == 'ok'">Enabled</span>
+				<span class="label label-danger" ng-show="!ip.fw.enabled && ip.fw.state == 'ok'">Disabled</span>
 				{{ ip.ip }}
 				<div class="pull-right">
-					<a class="btn btn-default btn-small" ng-show="ip.enabled" ng-click="disable(ip.ip)">Disable</a>
-					<a class="btn btn-default btn-small" ng-hide="ip.enabled" ng-click="enable(ip.ip)">Enable</a>
-					<a class="btn btn-danger btn-small" ng-click="remove(ip.ip)">Remove</a>
+					<a class="btn btn-default btn-small" ng-show="ip.fw.enabled && ip.fw.state == 'ok'" ng-click="disable(ip.block, ip.ip, list)">Disable</a>
+					<a class="btn btn-default btn-small" ng-show="!ip.fw.enabled && ip.fw.state == 'ok'" ng-click="enable(ip.block, ip.ip, list)">Enable</a>
+					<a class="btn btn-danger btn-small" ng-click="remove(ip.block, ip.ip, refresh)" ng-show="ip.fw.state == 'ok'">Remove</a>
 				</div>
 			</li>
 		</ul>
 
-		<div class="pull-right"><a ng-click="list()" class="btn btn-default btn-small">Refresh</a></div>
+		<div ng-show="showAll" ng-repeat="(block, blockIps) in ips">
+			<h5>{{ block }}</h5>
+			<ul class="list-group">
+				<li ng-repeat="(ip, ipProps) in (blockIps | orderBy:'ip')" class="list-group-item">
+					<span class="label label-default" ng-show="ipFw[ip]">{{ ipFw[ip].fw.state }}</span>
+					<span class="label label-success" ng-show="ipFw[ip] && ipFw[ip].fw.enabled">Enabled</span>
+					<span class="label label-danger" ng-show="ipFw[ip] && !ipFw[ip].fw.enabled">Disabled</span>
+					{{ ip }}
+					<div class="pull-right">
+						<a class="btn btn-default btn-small" ng-show="ipFw[ip].fw && ipFw[ip].fw.state == 'ok' && ipFw[ip].fw.enabled" ng-click="disable(block, ip, list)">Disable</a>
+						<a class="btn btn-default btn-small" ng-show="ipFw[ip].fw && ipFw[ip].fw.state == 'ok' && !ipFw[ip].fw.enabled" ng-click="enable(block, ip, list)">Enable</a>
+						<a class="btn btn-danger btn-small" ng-show="ipFw[ip].fw && ipFw[ip].fw.state == 'ok'" ng-click="remove(block, ip, refresh)">Remove</a>
+						<a class="btn btn-success btn-small" ng-show="!ipFw[ip].fw" ng-click="add(block, ip, refresh)">Add</a>
+					</div>
+				</li>
+ 			</ul>
+		</div>
 	</div>
 	<div class="col col-lg-6">
 		<h3>Actions</h3>
@@ -41,7 +63,7 @@
 		      <select ng-model="action">
 		      	<option value="add">Add</option>
 		      	<option value="enable">Enable</option>
-		      	<option value="enable">Disable</option>
+		      	<option value="disable">Disable</option>
 		      	<option value="remove">Remove</option>
 		      </select>
 		    </div>
@@ -58,5 +80,9 @@
 <style>
 	.list-group .btn-small {
 		margin-top: -5px;
+	}
+
+	.show-actions {
+		margin-top: 20px;
 	}
 </style>

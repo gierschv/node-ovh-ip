@@ -4,6 +4,12 @@ A really quickly written UI to manage the OVH TNF.
 
 **This module is unofficial and consequently not maintained by OVH.**
 
+## Screenshots
+
+![IP status](https://raw.github.com/gierschv/node-ovh-ip/master/public/images/screens/fw-status.png)
+
+![Rules editions](https://raw.github.com/gierschv/node-ovh-ip/master/public/images/screens/fw-rules.png)
+
 ## License
 
 This module is freely distributable under the terms of the MIT license.

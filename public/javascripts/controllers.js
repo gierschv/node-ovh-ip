@@ -1,71 +1,122 @@
 'use strict';
 
-function HomeCtrl($scope, $http, Ip, IpAdd) {
+function SplashCtrl($rootScope, $scope, $http, $location, $routeParams, IpTools) {
+  $rootScope.ips = null;
+  $scope.state = { total: 0, done: 0 };
+
+  if (typeof(window.localStorage) != 'undefined') {
+    try {
+      $rootScope.ips = JSON.parse(window.localStorage.getItem('ovh_ips'));
+    }
+    catch(e) {
+      $rootScope.ips = null;
+    }
+  }
+
+  if ($rootScope.ips !== null && !$routeParams.refresh) {
+    return $location.path($routeParams.next ? $routeParams.next : '/');
+  }
+
+  $rootScope.ips = {};
+
+  async.waterfall([
+    function (callback) {
+      $http.get('/ip').success(callback.bind(this, false));
+    },
+    function (ips, httpCode, callback) {
+      $scope.state.total = ips.length;
+      async.each(ips, function (block, callback) {
+        $rootScope.ips[block] = {};
+        var ipList = IpTools.cidrToRange(block);
+        for (var i = 0 ; i < ipList.length ; ++i) {
+          $rootScope.ips[block][ipList[i]] = {};
+        }
+
+        $http
+          .get('/ip/' + encodeURIComponent(block) + '/firewall')
+          .success(function (ip) {
+            $scope.state.done++;
+            for (var i = 0 ; i < ip.length ; ++i) {
+              $rootScope.ips[block][ip[i]].onFw = true;
+            }
+            callback(null);
+          })
+          .error(callback.bind(this, false));
+      }, function (err) {
+        if (typeof(window.localStorage) != 'undefined') {
+          window.localStorage.setItem('ovh_ips', JSON.stringify($rootScope.ips));
+        }
+
+        $location.path($routeParams.next ? $routeParams.next : '/');
+        callback();
+      });
+    }
+  ]);
+}
+
+SplashCtrl.$inject = [
+  '$rootScope', '$scope', '$http', '$location', '$routeParams', 'IpTools'
+];
+
+function HomeCtrl($rootScope, $scope, $location, $routeParams, $http, IpTools, IpFirewall) {
+  $scope.refresh = function (noForce) {
+    return $location.path('/splash').search({
+      refresh: !noForce, showAll: $scope.showAll
+    });
+  };
+
+  if (!$rootScope.ips) {
+    $scope.refresh(true);
+  }
+
+  if ($routeParams.showAll) {
+    $scope.showAll = true;
+  }
+
+  $scope.list = function () {
+    $scope.ipFw = IpTools.listFw();
+  };
+
+  $scope.list();
+
   $scope.errors = [];
   $scope.success = false;
   $scope.action = 'add';
 
-  // List
-  $scope.list = function () {
-    $http.get('/ip/firewall').success(function (ips) {
-      $scope.ips = [];
+  $scope.actions = {
+    'add': { method: 'add' },
+    'remove': { method: 'remove' },
+    'enable': { method: 'enable', params: { enabled: true } },
+    'disable': { method: 'enable', params: { enabled: false } }
+  };
 
-      async.map(ips, function (ip, callback) {
-        Ip.get({ ipOnFirewall: ip }, function (ip) {
-          callback(null, ip);
-        });
-      }, function (err, ips) {
-        if (err) {
+  for (var a in $scope.actions) {
+    $scope[a] = function (method, params, block, ip, callback) {
+      var route = { ip: block, ipOnFirewall: ip };
+      params = params || {};
+
+      if (method === 'add') {
+        params.ipOnFirewall = ip;
+        delete route.ipOnFirewall;
+      }
+
+      IpFirewall[method](route, params,
+        function (res) {
+          callback && callback(null, res);
+        },
+        function (err) {
           $scope.errors.push(err);
+          callback && callback(err);
         }
-        else {
-          $scope.ips = ips;
-        }
-      });
-    });
-  };
-  $scope.list();
-
-  $scope.add = function (ip, callback) {
-    IpAdd.add({ ip: ip }, function (res) {
-      callback(null, res);
-    }, function (err) {
-      $scope.errors.push(err);
-      callback(err);
-    });
-  };
-
-  $scope.enable = function (ip, callback) {
-    Ip.put({ ipOnFirewall: ip }, { enabled: true }, function (res) {
-      callback(null, res);
-    }, function (err) {
-      $scope.errors.push(err);
-      callback(err);
-    });
-  };
-
-  $scope.disable = function (ip, callback) {
-    Ip.put({ ipOnFirewall: ip }, { enabled: false }, function (res) {
-      callback(null, res);
-    }, function (err) {
-      $scope.errors.push(err);
-      callback(err);
-    });
-  };
-
-  $scope.remove = function (ip, callback) {
-    Ip.remove({ ipOnFirewall: ip }, function (res) {
-      callback(null, res);
-    }, function (err) {
-      $scope.errors.push(err);
-      callback(err);
-    });
-  };
+      );
+    }.bind(this, $scope.actions[a].method, $scope.actions[a].params);
+  }
 
   $scope.process = function () {
     $scope.errors = [];
     async.map($scope.ipsmodify.split('\n'), function (ip, callback) {
-      $scope[$scope.action].call(this, ip, callback);
+      var ipDetails = IpTools.getIpDetails(ip);
+      $scope[$scope.action].call(this, ipDetails.block, ip, callback);
     }, function (err, ips) {
       if (err) {
         // $scope.errors.push(err);
@@ -75,77 +126,58 @@ function HomeCtrl($scope, $http, Ip, IpAdd) {
       }
     });
   };
-};
+}
 
-HomeCtrl.$inject = ['$scope', '$http', 'Ip', 'IpAdd'];
+HomeCtrl.$inject = [
+  '$rootScope', '$scope', '$location', '$routeParams', '$http', 'IpTools', 'IpFirewall'
+];
 
-function TasksCtrl($scope, $http, IpTask) {
+function RulesCtrl($rootScope, $scope, $location, $routeParams, $http, IpTools, IpFirewall) {
+  if (!$rootScope.ips) {
+    return $location.path('/splash').search({ next: '/rules', ip: $routeParams.ip });
+  }
+
   $scope.errors = [];
   $scope.success = false;
-  $scope.action = 'add';
 
-  // List
-  $http.get('/ip/firewall').success(function (ips) {
-    $scope.ips = ips;
-  });
-
-  $scope.$watch('ip', function() {
-    if (typeof($scope.ip) != 'undefined') {
-      $http.get('/ip/firewall/' + $scope.ip + '/tasks').success(function (tasks) {
-        async.map(tasks, function (task, callback) {
-          IpTask.get({ ipOnFirewall: $scope.ip, id: task }, function (task) {
-            callback(null, task);
-          });
-        }, function (err, tasks) {
-          if (err) {
-            $errors.push(err);
-          }
-          
-          $scope.tasks = tasks;
-        });
-      });
-    }
-  });
-
-  $scope.remove = function (ip, task) {
-    IpTask.delete({ ipOnFirewall: ip, id: task });
-  };
-};
-
-TasksCtrl.$inject = ['$scope', '$http', 'IpTask'];
-
-function RulesCtrl($scope, $http, FirewallRule, PutFirewallRule) {
-  $scope.errors = [];
-  $scope.success = false;
-  $scope.action = 'add';
-
-  // List
-  $http.get('/ip/firewall').success(function (ips) {
-    $scope.ips = ips;
-  });
+  if ($routeParams.ip) {
+    $scope.ip = $routeParams.ip;
+  }
 
   $scope.list = function () {
-    if (typeof($scope.ip) == 'undefined') {
+    $scope.ipFw = IpTools.listFw();
+    var ipDetails = IpTools.getIpDetails($scope.ip);
+
+    if (typeof(ipDetails) == 'undefined') {
       return;
     }
 
-    $http.get('/ip/firewall/' + $scope.ip + '/rules').success(function (rules) {
-      async.map(rules, function (rule, callback) {
-        FirewallRule.get({ ipOnFirewall: $scope.ip, sequence: rule }, function (rule) {
-          callback(null, rule);
-        }, function (err) {
-          callback(err);
-        })
-      }, function (err, rules) {
-        if (err) {
-          $acope.errors.push(err);
-        }
-        else {
-          $scope.rules = rules;
-        }
+    $location.search({ ip: $scope.ip });
+    $scope.block = ipDetails.block;
+
+    $http
+      .get('/ip/' + encodeURIComponent($scope.block) + '/firewall/' + $scope.ip + '/rules')
+      .success(function (rules) {
+        async.map(rules, function (rule, callback) {
+          IpFirewall.getRule({
+            ip: $scope.block, ipOnFirewall: $scope.ip, actionParam: rule
+          }, function (rule) {
+            callback(null, rule);
+          }, function (err) {
+            callback(err);
+          });
+        }, function (err, rules) {
+          if (err) {
+            $acope.errors.push(err);
+          }
+          else {
+            $scope.rules = rules;
+          }
+        });
       });
-    });
   };
+
+  $scope.list();
 
   $scope.$watch('ip', $scope.list);
   $scope.$watch('newRulesRaw', function () {
@@ -158,6 +190,7 @@ function RulesCtrl($scope, $http, FirewallRule, PutFirewallRule) {
         options = ['urg','psh','ack','syn','fin','rst','established','fragments'],
         rgx_ipv4 = /^0*([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])\.0*([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])\.0*([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])\.0*([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])$/,
         rgx_bloc_ipv4 = /^0*([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])\.0*([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])\.0*([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])\.0*([1-9]?\d|1\d\d|2[0-4]\d|25[0-5])\/([0-9]+)$/;
+
     for (var i = 0 ; i < rules.length ; ++i) {
       var rule = { options: []}, ruleRaw = rules[i].split(' ');
       if (ruleRaw.length < 4) {
@@ -186,18 +219,30 @@ function RulesCtrl($scope, $http, FirewallRule, PutFirewallRule) {
         }
 
         // ip dst
-        if (rgx_ipv4.test(str) && $scope.ips.indexOf(str) >= 0) {
+        if (rgx_ipv4.test(str) && IpTools.getIpDetails(str)) {
           rule.ip_dst = str;
           continue;
         }
 
         // ports
-        if (str === 'range' && ruleRaw.length > 0) {
+        if (str === 'eq' && ruleRaw.length > 0) {
           if (typeof(rule.ip_dst) == 'undefined') {
-            rule.port_src = [ruleRaw.shift(), ruleRaw.shift()];
+            rule.port_src = [ruleRaw.shift()];
+            if (/^\+?(0|[1-9]\d*)$/.test(ruleRaw[0])) {
+              rule.port_src.push(ruleRaw.shift());
+            }
+            else {
+              rule.port_src.push(rule.port_src[0]);
+            }
           }
           else {
-            rule.port_dst = [ruleRaw.shift(), ruleRaw.shift()];
+            rule.port_dst = [ruleRaw.shift()];
+            if (/^\+?(0|[1-9]\d*)$/.test(ruleRaw[0])) {
+              rule.port_dst.push(ruleRaw.shift());
+            }
+            else {
+              rule.port_dst.push(rule.port_dst[0]);
+            }
           }
           continue;
         }
@@ -222,7 +267,7 @@ function RulesCtrl($scope, $http, FirewallRule, PutFirewallRule) {
         action: rule.action,
         protocol: rule.protocol,
         sequence: rule.sequence,
-        source: rule.ip_src,
+        source: rule.ip_src == 'any' ? null : rule.ip_src,
         tcpOption: {},
         udpOption: {}
       };
@@ -230,7 +275,7 @@ function RulesCtrl($scope, $http, FirewallRule, PutFirewallRule) {
       // issue with request ? invalid usage with tcpOption...
       for (var i = 0 ; i < rule.options.length ; ++i) {
         if (rule.options[i] === 'fragments') {
-          body.udpOption['fragments'] = true;
+          body.udpOption.fragments = true;
         }
         else {
           body.tcpOption[rule.options[i]] = true;
@@ -241,11 +286,14 @@ function RulesCtrl($scope, $http, FirewallRule, PutFirewallRule) {
         body.sourcePort = { from: rule.port_src[0], to: rule.port_src[1] };
       }
 
-      if (typeof(rule.port_dst_) != 'undefined' && rule.port_dst.length > 1) {
+      if (typeof(rule.port_dst) != 'undefined' && rule.port_dst.length > 1) {
         body.destinationPort = { from: rule.port_dst[0], to: rule.port_dst[1] };
       }
 
-      PutFirewallRule.post({ipOnFirewall: rule.ip_dst}, body, function (res) {
+      IpFirewall.addRule({
+        ip: IpTools.getIpDetails(rule.ip_dst).block,
+        ipOnFirewall: rule.ip_dst
+      }, body, function (res) {
         callback(null, res);
       }, function (err) {
         callback(err);
@@ -258,16 +306,23 @@ function RulesCtrl($scope, $http, FirewallRule, PutFirewallRule) {
         $scope.newRulesRaw = '';
         $scope.success = true;
       }
+
+      $scope.list();
     });
   };
 
   $scope.remove = function (seq) {
-    FirewallRule.delete({ ipOnFirewall: $scope.ip, sequence: seq }, function (rule) {
+    IpFirewall.delRule({
+      ip: $scope.block, ipOnFirewall: $scope.ip, actionParam: seq
+    }, function (rule) {
       $scope.success = true;
+      $scope.list();
     }, function (err) {
       $scope.errors.push(err);
     });
   };
-};
+}
 
-RulesCtrl.$inject = ['$scope', '$http', 'FirewallRule', 'PutFirewallRule'];
+RulesCtrl.$inject = [
+  '$rootScope', '$scope', '$location', '$routeParams', '$http', 'IpTools', 'IpFirewall'
+];

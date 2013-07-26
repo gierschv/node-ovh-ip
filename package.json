@@ -1,6 +1,9 @@
 {
   "name": "node-ovh-ip",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "description": "A really quickly written UI to manage OVH Network Firewall",
+  "homepage": "https://github.com/gierschv/node-ovh-ip",
+  "author": "Vincent Giersch <mail@vincent.sh>",
   "scripts": {
     "start": "node --harmony-proxies app.js"
   },
@@ -14,5 +17,12 @@
     "grunt": "latest",
     "grunt-contrib-clean": "latest",
     "grunt-contrib-less": "latest"
+  },
+  "repository": {
+      "type": "git",
+      "url": "https://github.com/gierschv/node-ovh-ip.git"
+  },
+  "bugs": {
+      "url": "https://github.com/gierschv/node-ovh-ip/issues"
   }
 }
