@@ -1,8 +1,39 @@
 # node-ovh-ip
 
-A really quickly written UI to manage the OVH TNF.
+A really quickly written UI to manage the OVH network firewall.
 
 **This module is unofficial and consequently not maintained by OVH.**
+
+## Setup
+
+[Node.js](http://nodejs.org/) is required to run this application.
+
+```bash
+$ npm install node-ovh-ip && cd node_modules/node-ovh-ip
+```
+
+Edit the configuration file `config/default.yaml`:
+
+```yaml
+app:
+  # This string is used by the web server (connect) to compute
+  # the session hash (http://www.senchalabs.org/connect/middleware-session.html).
+  sessSecret: myRandomString
+  # The base URL of the application. It will be used to redirect
+  # the user after the authentication on OVH.com.
+  baseUrl: http://localhost:3000
+ovh:
+  # You can create an application on OVH.com:
+  # https://www.ovh.com/fr/cgi-bin/api/createApplication.cgi
+  appKey: 42424242
+  appSecret: 424242
+```
+
+Run the application:
+
+```bash
+$ npm start
+```
 
 ## Screenshots
 
