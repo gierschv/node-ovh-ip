@@ -1,6 +1,6 @@
 {
   "name": "node-ovh-ip",
-  "version": "0.0.3-1",
+  "version": "0.0.3-2",
   "description": "A really quickly written UI to manage OVH Network Firewall",
   "homepage": "https://github.com/gierschv/node-ovh-ip",
   "author": "Vincent Giersch <mail@vincent.sh>",
@@ -11,7 +11,7 @@
     "express": "3.3.2",
     "config": "latest",
     "js-yaml": "latest",
-    "ovh": "latest"
+    "ovh": "0.3.x"
   },
   "devDependencies": {
     "grunt": "latest",
