@@ -17,7 +17,7 @@ Edit the configuration file `config/default.yaml`:
 ```yaml
 app:
   # This string is used by the web server (connect) to compute
-  # the session hash (http://www.senchalabs.org/connect/middleware-session.html).
+  # the session hash (http://www.senchalabs.org/connect/session.html).
   sessSecret: myRandomString
   # The base URL of the application. It will be used to redirect
   # the user after the authentication on OVH.com.
